@@ -20,7 +20,7 @@ const QuickCard = ({ kicker, title, body, cta, href, onClick }) => {
 };
 
 const Home = ({ onNavigate, sections }) => (
-  <main data-leaves="falling">
+  <main>
     {/* HERO */}
     <section style={{ background: 'var(--navy-ink)', color: 'white', position: 'relative', overflow: 'hidden' }}>
       <div style={{

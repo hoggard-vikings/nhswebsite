@@ -1,6 +1,6 @@
 // Seasonal fall leaves. Plain JS, no dependencies, independent of the React app.
 // To turn off: set FALL_LEAVES_ENABLED to false, or delete the fall-leaves.js <script> tag in index.html.
-// Leaves anchor to elements marked data-leaves="logo" | "sponsored-box" | "falling"; those attributes do nothing on their own.
+// Leaves anchor to elements marked data-leaves="logo" | "sponsored-box"; those attributes do nothing on their own.
 (function () {
   'use strict';
 
@@ -77,7 +77,7 @@
       el: el, s: size, w: shape.w, x: 0, y: 0, a: 0, sx: 1, vx: 0, vy: 0,
       av: 0, avBase: rand(-28, 28), spin: 0, flip: 0, flipRate: 0, baseFlip: rand(1.1, 2.4),
       sway: rand(160, 300), omega: rand(1.5, 2.5), phase: rand(0, 6.283), time: 0,
-      mode: 'rest', surface: null, ax: 0, fx: 0,
+      mode: 'rest', surface: null, ax: 0, fx: 0, lift: 0,
       restA: 90, restSx: 0.6, settle: 1, fromA: 90, fromSx: 0.6,
       falling: false, canLand: true, opacity: 1, fading: false, launchY: 0, cool: 0,
     };
@@ -120,11 +120,11 @@
     if (l.surface === 'header') {
       if (!bar || !logo) return;
       l.x = Math.min(Math.max(logo.right + l.ax, bar.left + 8), bar.right - 8);
-      l.y = bar.bottom - restExtent(l) + 0.8;
+      l.y = bar.bottom - restExtent(l) + 0.8 - l.lift;
     } else if (l.surface === 'box') {
       if (!box) return;
       l.x = box.left + window.scrollX + l.fx * box.width;
-      l.y = box.top + window.scrollY - restExtent(l) + 0.8;
+      l.y = box.top + window.scrollY - restExtent(l) + 0.8 - l.lift;
     }
     apply(l);
   }
@@ -156,12 +156,15 @@
       var r = c.getBoundingClientRect();
       if (r.width && r.left > logo.right) limit = Math.min(limit, r.left - 14);
     });
-    var span = Math.max(40, Math.min(small ? 120 : 300, limit - start));
-    var n = Math.min(small ? 4 : randInt(8, 10), Math.max(2, Math.floor(span / (small ? 17 : 22))));
+    // A tight, overlapping pile: leaves spaced closer than their width, raised toward the middle.
+    var span = Math.max(40, Math.min(small ? 80 : 150, limit - start));
+    var n = small ? 5 : randInt(8, 10);
     for (var i = 0; i < n; i++) {
+      var t = (i + 0.5) / n;
       var l = makeLeaf(small ? rand(16, 22) : rand(20, 28));
       l.surface = 'header';
-      l.ax = start + span * (i + 0.5) / n + rand(-7, 7) - logo.right;
+      l.ax = start + span * t + rand(-8, 8) - logo.right;
+      l.lift = (1 - Math.abs(2 * t - 1)) * rand(0, small ? 5 : 8);
       restPose(l);
       fixedLayer.appendChild(l.el);
     }
@@ -171,19 +174,19 @@
   function buildBox() {
     clearSurface('box');
     if (!boxEl) return;
-    var n = smallMQ.matches ? 3 : randInt(3, 5);
-    var spots = [];
-    while (spots.length < n) {
-      var f = Math.random() < 0.6 ? rand(0.05, 0.32) : rand(0.6, 0.94);
-      if (spots.every(function (g) { return Math.abs(g - f) > 0.07; })) spots.push(f);
-    }
-    spots.forEach(function (fx) {
+    var n = smallMQ.matches ? randInt(5, 6) : randInt(8, 10);
+    // Two overlapping piles along the top edge, one larger on the left.
+    var piles = [{ c: rand(0.16, 0.28), w: 0.26 }, { c: rand(0.68, 0.82), w: 0.2 }];
+    for (var i = 0; i < n; i++) {
+      var p = Math.random() < 0.6 ? piles[0] : piles[1];
+      var off = (Math.random() - 0.5) * p.w;
       var l = makeLeaf(rand(22, 30));
       l.surface = 'box';
-      l.fx = fx;
+      l.fx = Math.min(0.97, Math.max(0.03, p.c + off));
+      l.lift = (1 - Math.abs(off) / (p.w / 2)) * rand(0, 9);
       restPose(l);
       docLayer.appendChild(l.el);
-    });
+    }
     layout();
   }
 
@@ -227,6 +230,7 @@
   function land(l, surface, bar, logo, box) {
     l.mode = 'rest';
     l.surface = surface;
+    l.lift = 0;
     l.vx = 0; l.vy = 0;
     l.fading = false; l.opacity = 1;
     l.el.style.opacity = '';
@@ -347,15 +351,9 @@
     clearTimeout(fallTimer);
     if (!motionOK || document.hidden) return;
     fallTimer = setTimeout(function () {
-      if (!smallMQ.matches && document.querySelector('[data-leaves="falling"]')) {
-        var n = randInt(2, 3), delay = 0;
-        for (var i = 0; i < n; i++) {
-          setTimeout(dropOne, delay);
-          delay += rand(500, 1600);
-        }
-      }
+      dropOne();
       scheduleFall();
-    }, rand(15000, 30000));
+    }, rand(5000, 10000));
   }
 
   window.addEventListener('pointermove', function (e) {
