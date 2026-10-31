@@ -10,17 +10,20 @@
   var NS = 'http://www.w3.org/2000/svg';
   var GRAVITY = 150;
   var DRAG = 1.9;
-  var PALETTE = ['#c4a875', '#a5915f', '#d4a33f', '#c8862c', '#b5662a', '#94502a', '#74492a'];
-  var BRIGHT = ['#c4a875', '#d4a33f', '#c8862c', '#b5662a', '#a5915f'];
-  // Leaf outlines in a -11..11 box, tip up, stem down; w = half-width used to rest them on an edge.
-  var SHAPES = [
-    { w: 6, d: 'M0,-10 C4.6,-7.2 6.2,-2 4.6,2.8 C3.4,6 1.6,7.6 0,8.4 C-1.6,7.6 -3.4,6 -4.6,2.8 C-6.2,-2 -4.6,-7.2 0,-10 Z',
-      vein: 'M0,10.5 L0,-8.2 M0,-2 L3.4,-4.4 M0,-2 L-3.4,-4.4 M0,2.6 L3.6,0.4 M0,2.6 L-3.6,0.4' },
-    { w: 9, d: 'M0,-10 L1.7,-5.6 L6.4,-7.2 L4.9,-2.4 L9.2,-1 L5.6,1.6 L6.6,5.4 L2,3.8 L0.7,7.6 L-0.7,7.6 L-2,3.8 L-6.6,5.4 L-5.6,1.6 L-9.2,-1 L-4.9,-2.4 L-6.4,-7.2 L-1.7,-5.6 Z',
-      vein: 'M0,10.5 L0,-8.4 M0,3 L6.2,-0.8 M0,3 L-6.2,-0.8 M0,3 L4.6,4.6 M0,3 L-4.6,4.6' },
-    { w: 6, d: 'M0,-10 C2.5,-10 3.5,-8 2.8,-6.6 C4.8,-6.8 5.2,-4.6 3.6,-3.6 C5.8,-3.4 6,-0.8 4,0 C6,0.6 5.6,3.2 3.4,3.4 C4.2,5.4 2.6,7 0.9,6.8 L0.6,8 L-0.6,8 L-0.9,6.8 C-2.6,7 -4.2,5.4 -3.4,3.4 C-5.6,3.2 -6,0.6 -4,0 C-6,-0.8 -5.8,-3.4 -3.6,-3.6 C-5.2,-4.6 -4.8,-6.8 -2.8,-6.6 C-3.5,-8 -2.5,-10 0,-10 Z',
-      vein: 'M0,10.5 L0,-8.4' },
+  // Classic fall colors: yellow, orange, red, brown.
+  var PALETTE = ['#f4c430', '#e9a21b', '#ef7d1a', '#d9561b', '#c8312a', '#a8221d', '#8b5a2b', '#a0662f'];
+  // Classic maple leaf in a -11..11 box, tip up, stem down. Right-half outline, mirrored for the left.
+  var MAPLE_HALF = [
+    [1.5, -7.3], [3.1, -8.4], [2.6, -4.8], [1.9, -2.5],
+    [4.5, -4.1], [5.3, -6.3], [6.1, -4.7], [8.9, -6.7], [7.7, -3.4], [9.0, -2.5], [6.5, -0.4], [4.4, 0.9],
+    [8.4, 2.1], [9.4, 3.4], [6.9, 3.9], [7.4, 5.6], [4.4, 4.9], [1.1, 6.4], [0.6, 6.6],
   ];
+  var MAPLE = {
+    w: 9.4,
+    d: 'M0,-10.5 ' + MAPLE_HALF.map(function (p) { return 'L' + p[0] + ',' + p[1]; }).join(' ') + ' ' +
+      MAPLE_HALF.slice().reverse().map(function (p) { return 'L' + -p[0] + ',' + p[1]; }).join(' ') + ' Z',
+    vein: 'M0.3,10.8 Q0.1,8 0,5.6 L0,-8.6 M0,5.6 L7.8,-5.8 M0,5.6 L-7.8,-5.8 M0,5.6 L8.2,2.9 M0,5.6 L-8.2,2.9',
+  };
 
   var reduceMQ = window.matchMedia('(prefers-reduced-motion: reduce)');
   var smallMQ = window.matchMedia('(max-width: 600px)');
@@ -60,8 +63,8 @@
   var raf = 0, lastT = 0, fallTimer = 0;
   var mx = 0, my = 0, mvx = 0, mvy = 0, lastMove = 0;
 
-  function makeLeaf(size, palette) {
-    var shape = pick(SHAPES), color = pick(palette), dark = shade(color, 0.66);
+  function makeLeaf(size) {
+    var shape = MAPLE, color = pick(PALETTE), dark = shade(color, 0.62);
     var el = document.createElementNS(NS, 'svg');
     el.setAttribute('viewBox', '-11 -11 22 22');
     el.setAttribute('width', size.toFixed(1));
@@ -69,7 +72,7 @@
     el.style.cssText = 'position:absolute;left:0;top:0;overflow:visible;transform-origin:50% 50%;';
     el.innerHTML =
       '<path d="' + shape.d + '" fill="' + color + '" stroke="' + dark + '" stroke-width="0.6" stroke-linejoin="round"/>' +
-      '<path d="' + shape.vein + '" fill="none" stroke="' + dark + '" stroke-width="0.7" stroke-linecap="round" opacity="0.6"/>';
+      '<path d="' + shape.vein + '" fill="none" stroke="' + dark + '" stroke-width="0.7" stroke-linecap="round" stroke-linejoin="round" opacity="0.55"/>';
     var l = {
       el: el, s: size, w: shape.w, x: 0, y: 0, a: 0, sx: 1, vx: 0, vy: 0,
       av: 0, avBase: rand(-28, 28), spin: 0, flip: 0, flipRate: 0, baseFlip: rand(1.1, 2.4),
@@ -94,8 +97,8 @@
   }
 
   function restPose(l) {
-    l.restA = (Math.random() < 0.5 ? 90 : -90) + rand(-18, 18);
-    l.restSx = rand(0.62, 0.88) * (Math.random() < 0.5 ? -1 : 1);
+    l.restA = (Math.random() < 0.5 ? 90 : -90) + rand(-30, 30);
+    l.restSx = rand(0.72, 0.95) * (Math.random() < 0.5 ? -1 : 1);
     l.a = l.restA;
     l.sx = l.restSx;
     l.settle = 1;
@@ -146,17 +149,17 @@
     if (!logoEl || !barEl) return;
     var bar = barEl.getBoundingClientRect(), logo = logoEl.getBoundingClientRect();
     var small = smallMQ.matches;
-    var start = logo.right - (small ? 26 : 44);
+    var start = logo.right + (small ? 4 : 10);
     var limit = bar.right - 12;
     Array.prototype.forEach.call(barEl.children, function (c) {
       if (c === logoEl) return;
       var r = c.getBoundingClientRect();
       if (r.width && r.left > logo.right) limit = Math.min(limit, r.left - 14);
     });
-    var span = Math.max(30, Math.min(small ? 90 : 180, limit - start));
-    var n = Math.min(small ? 4 : randInt(8, 10), Math.max(2, Math.floor(span / 16)));
+    var span = Math.max(40, Math.min(small ? 120 : 300, limit - start));
+    var n = Math.min(small ? 4 : randInt(8, 10), Math.max(2, Math.floor(span / (small ? 17 : 22))));
     for (var i = 0; i < n; i++) {
-      var l = makeLeaf(small ? rand(9.5, 13) : rand(10, 15.5), PALETTE);
+      var l = makeLeaf(small ? rand(16, 22) : rand(20, 28));
       l.surface = 'header';
       l.ax = start + span * (i + 0.5) / n + rand(-7, 7) - logo.right;
       restPose(l);
@@ -172,10 +175,10 @@
     var spots = [];
     while (spots.length < n) {
       var f = Math.random() < 0.6 ? rand(0.05, 0.32) : rand(0.6, 0.94);
-      if (spots.every(function (g) { return Math.abs(g - f) > 0.045; })) spots.push(f);
+      if (spots.every(function (g) { return Math.abs(g - f) > 0.07; })) spots.push(f);
     }
     spots.forEach(function (fx) {
-      var l = makeLeaf(rand(10, 15), BRIGHT);
+      var l = makeLeaf(rand(22, 30));
       l.surface = 'box';
       l.fx = fx;
       restPose(l);
@@ -231,9 +234,9 @@
     var base = ((l.a % 360) + 360) % 360;
     var target = Math.abs(base - 90) <= Math.abs(base - 270) ? 90 : 270;
     l.fromA = l.a;
-    l.restA = l.a + (target - base) + rand(-18, 18);
+    l.restA = l.a + (target - base) + rand(-30, 30);
     l.fromSx = l.sx;
-    l.restSx = (l.sx < 0 ? -1 : 1) * rand(0.62, 0.88);
+    l.restSx = (l.sx < 0 ? -1 : 1) * rand(0.72, 0.95);
     l.settle = 0;
     if (surface === 'header') {
       l.ax = l.x - logo.right;
@@ -273,7 +276,7 @@
 
     if (!l.fading && (l.falling ? l.y > vh * 0.7 : (l.y - l.launchY > 260 || l.time > 10))) l.fading = true;
     if (l.fading) l.opacity -= dt / 1.4;
-    if (l.opacity <= 0 || l.y > vh + 30 || l.x < -40 || l.x > vw + 40) return removeLeaf(l);
+    if (l.opacity <= 0 || l.y > vh + 60 || l.x < -60 || l.x > vw + 60) return removeLeaf(l);
     l.el.style.opacity = l.opacity.toFixed(2);
     apply(l);
   }
@@ -308,7 +311,7 @@
       if (l.cool > now) return;
       var inDoc = l.el.parentNode === docLayer;
       var lx = inDoc ? l.x - ox : l.x, ly = inDoc ? l.y - oy : l.y;
-      var dx = lx - mx, dy = ly - my, d = Math.hypot(dx, dy), reach = 26 + l.s * 1.2;
+      var dx = lx - mx, dy = ly - my, d = Math.hypot(dx, dy), reach = 24 + l.s;
       if (d > reach) return;
       var str = Math.min(speed, 1400) * (0.35 + 0.65 * (1 - d / reach));
       var nx = d > 0.5 ? dx / d : mvx / speed, ny = d > 0.5 ? dy / d : mvy / speed;
@@ -326,7 +329,7 @@
   function dropOne() {
     if (!motionOK || document.hidden || smallMQ.matches) return;
     var vw = window.innerWidth;
-    var l = makeLeaf(rand(11, 16.5), PALETTE);
+    var l = makeLeaf(rand(24, 34));
     l.falling = true;
     l.spin = rand(0, 360);
     l.a = l.spin;
