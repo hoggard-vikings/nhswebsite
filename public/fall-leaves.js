@@ -51,15 +51,18 @@
     d.style.cssText = css;
     return d;
   }
-  // Header leaves and anything airborne live in viewport coordinates above the sticky header;
-  // box leaves live in document coordinates so they scroll natively with the box (and slide under the header).
+  // Resting header leaves live inside the sticky header itself so they move with it exactly (mobile browser
+  // toolbars and overscroll can otherwise shift the header out from under a separate overlay).
+  // Box leaves live in document coordinates so they scroll natively with the box (and slide under the header).
+  // Airborne leaves live in viewport coordinates above everything.
   var fixedLayer = makeLayer('position:fixed;inset:0;overflow:hidden;z-index:60;');
   var docLayer = makeLayer('position:absolute;left:0;top:0;width:0;height:0;z-index:40;');
+  var headerLayer = makeLayer('position:absolute;left:0;top:0;width:0;height:0;z-index:1;');
   document.body.appendChild(docLayer);
   document.body.appendChild(fixedLayer);
 
   var leaves = new Set();
-  var logoEl = null, barEl = null, boxEl = null;
+  var logoEl = null, barEl = null, headerEl = null, boxEl = null;
   var raf = 0, lastT = 0, fallTimer = 0;
   var mx = 0, my = 0, mvx = 0, mvy = 0, lastMove = 0;
 
@@ -116,15 +119,15 @@
       l.a.toFixed(1) + 'deg) scale(' + l.sx.toFixed(3) + ',1)';
   }
 
-  function placeResting(l, bar, logo, box) {
+  function placeResting(l, r) {
     if (l.surface === 'header') {
-      if (!bar || !logo) return;
-      l.x = Math.min(Math.max(logo.right + l.ax, bar.left + 8), bar.right - 8);
-      l.y = bar.bottom - restExtent(l) + 0.8 - l.lift;
+      if (!r.bar || !r.logo || !r.hdr) return;
+      l.x = Math.min(Math.max(r.logo.right + l.ax, r.bar.left + 8), r.bar.right - 8) - r.hdr.left;
+      l.y = r.bar.bottom - r.hdr.top - restExtent(l) + 0.8 - l.lift;
     } else if (l.surface === 'box') {
-      if (!box) return;
-      l.x = box.left + window.scrollX + l.fx * box.width;
-      l.y = box.top + window.scrollY - restExtent(l) + 0.8 - l.lift;
+      if (!r.box) return;
+      l.x = r.box.left + window.scrollX + l.fx * r.box.width;
+      l.y = r.box.top + window.scrollY - restExtent(l) + 0.8 - l.lift;
     }
     apply(l);
   }
@@ -133,6 +136,7 @@
     return {
       bar: barEl && barEl.getBoundingClientRect(),
       logo: logoEl && logoEl.getBoundingClientRect(),
+      hdr: headerEl && headerEl.getBoundingClientRect(),
       box: boxEl && boxEl.getBoundingClientRect(),
     };
   }
@@ -140,7 +144,7 @@
   function layout() {
     var r = rects();
     leaves.forEach(function (l) {
-      if (l.mode === 'rest') placeResting(l, r.bar, r.logo, r.box);
+      if (l.mode === 'rest') placeResting(l, r);
     });
   }
 
@@ -166,7 +170,7 @@
       l.ax = start + span * t + rand(-8, 8) - logo.right;
       l.lift = (1 - Math.abs(2 * t - 1)) * rand(0, small ? 5 : 8);
       restPose(l);
-      fixedLayer.appendChild(l.el);
+      headerLayer.appendChild(l.el);
     }
     layout();
   }
@@ -199,7 +203,9 @@
       if (logoEl) { ro.unobserve(logoEl); ro.unobserve(barEl); }
       logoEl = logo;
       barEl = logo ? logo.parentElement : null;
+      headerEl = logo ? logo.closest('header') : null;
       if (logoEl) { ro.observe(logoEl); ro.observe(barEl); }
+      if (headerEl && headerLayer.parentNode !== headerEl) headerEl.appendChild(headerLayer);
       buildHeader();
     }
     var box = document.querySelector('[data-leaves="sponsored-box"]');
@@ -227,7 +233,7 @@
     l.el.style.willChange = 'transform, opacity';
   }
 
-  function land(l, surface, bar, logo, box) {
+  function land(l, surface, r) {
     l.mode = 'rest';
     l.surface = surface;
     l.lift = 0;
@@ -243,12 +249,13 @@
     l.restSx = (l.sx < 0 ? -1 : 1) * rand(0.72, 0.95);
     l.settle = 0;
     if (surface === 'header') {
-      l.ax = l.x - logo.right;
+      l.ax = l.x - r.logo.right;
+      headerLayer.appendChild(l.el);
     } else {
-      l.fx = Math.min(0.97, Math.max(0.03, (l.x - box.left) / box.width));
+      l.fx = Math.min(0.97, Math.max(0.03, (l.x - r.box.left) / r.box.width));
       docLayer.appendChild(l.el);
     }
-    placeResting(l, bar, logo, box);
+    placeResting(l, r);
   }
 
   function fly(l, dt, vw, vh, r) {
@@ -268,17 +275,18 @@
 
     if (l.canLand && l.vy > 0) {
       var bar = r.bar, box = r.box;
-      if (bar && r.logo) {
+      if (bar && r.logo && r.hdr) {
         var hl = bar.bottom - l.s * 0.18;
-        if (py < hl && l.y >= hl && l.x > bar.left + 8 && l.x < bar.right - 8) return land(l, 'header', bar, r.logo, box);
+        if (py < hl && l.y >= hl && l.x > bar.left + 8 && l.x < bar.right - 8) return land(l, 'header', r);
       }
       if (box && box.top > (bar ? bar.bottom : 0)) {
         var bl = box.top - l.s * 0.18;
-        if (py < bl && l.y >= bl && l.x > box.left + 6 && l.x < box.right - 6) return land(l, 'box', bar, r.logo, box);
+        if (py < bl && l.y >= bl && l.x > box.left + 6 && l.x < box.right - 6) return land(l, 'box', r);
       }
     }
 
-    if (!l.fading && (l.falling ? l.y > vh * 0.7 : (l.y - l.launchY > 260 || l.time > 10))) l.fading = true;
+    // Falling leaves are gone within ~9s so only one is ever on screen with a 10s drop interval.
+    if (!l.fading && (l.falling ? (l.y > vh * 0.7 || l.time > 7.5) : (l.y - l.launchY > 260 || l.time > 10))) l.fading = true;
     if (l.fading) l.opacity -= dt / 1.4;
     if (l.opacity <= 0 || l.y > vh + 60 || l.x < -60 || l.x > vw + 60) return removeLeaf(l);
     l.el.style.opacity = l.opacity.toFixed(2);
@@ -310,11 +318,16 @@
   function gust() {
     var speed = Math.hypot(mvx, mvy);
     if (speed < 40) return;
-    var now = performance.now(), ox = window.scrollX, oy = window.scrollY, moved = false;
+    var now = performance.now(), ox = window.scrollX, oy = window.scrollY, hdr = null, moved = false;
     leaves.forEach(function (l) {
       if (l.cool > now) return;
-      var inDoc = l.el.parentNode === docLayer;
-      var lx = inDoc ? l.x - ox : l.x, ly = inDoc ? l.y - oy : l.y;
+      var parent = l.el.parentNode, lx = l.x, ly = l.y;
+      if (parent === docLayer) {
+        lx -= ox; ly -= oy;
+      } else if (parent === headerLayer) {
+        hdr = hdr || headerEl.getBoundingClientRect();
+        lx += hdr.left; ly += hdr.top;
+      }
       var dx = lx - mx, dy = ly - my, d = Math.hypot(dx, dy), reach = 24 + l.s;
       if (d > reach) return;
       var str = Math.min(speed, 1400) * (0.35 + 0.65 * (1 - d / reach));
@@ -353,7 +366,7 @@
     fallTimer = setTimeout(function () {
       dropOne();
       scheduleFall();
-    }, rand(5000, 10000));
+    }, 10000);
   }
 
   window.addEventListener('pointermove', function (e) {
