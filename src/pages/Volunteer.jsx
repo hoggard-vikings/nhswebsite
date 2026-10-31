@@ -59,7 +59,7 @@ const Volunteer = ({ onNavigate }) => {
       {/* Dual CTA cards */}
       <section className="pad-md">
         <div className="grid-volunteer-cta" style={{ maxWidth: 1100, margin: '0 auto' }}>
-          <div style={{ background: 'rgb(14, 26, 54)', color: 'white', padding: '40px 32px', display: 'flex', flexDirection: 'column', gap: 16 }}>
+          <div data-leaves="sponsored-box" style={{ background: 'rgb(14, 26, 54)', color: 'white', padding: '40px 32px', display: 'flex', flexDirection: 'column', gap: 16 }}>
             <div>
               <div className="eyebrow on-dark">Now Open</div>
               <h2 style={{ color: 'white', fontSize: 'clamp(20px, 2vw, 28px)', marginTop: 8 }}>Chapter-Sponsored Events</h2>

@@ -28,7 +28,7 @@ export const Nav = ({ active, onNavigate }) => {
         gap: 16,
       }}>
         {/* Logo */}
-        <a href="#" onClick={(e) => { e.preventDefault(); handleNav('Home'); }}
+        <a href="#" onClick={(e) => { e.preventDefault(); handleNav('Home'); }} data-leaves="logo"
           style={{ display: 'flex', alignItems: 'center', gap: 12, textDecoration: 'none', color: 'var(--navy-ink)', flexShrink: 0 }}>
           <NHSLogo size={38} color="var(--navy)" accent="var(--gold)" />
           <div>
