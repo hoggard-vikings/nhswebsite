@@ -1,5 +1,5 @@
 // events-data.js ? Auto-generated. Do not edit manually.
-// Last updated: 2026-10-08T13:16:12.287Z
+// Last updated: 2026-11-05T03:13:45.887Z
 
 var UPCOMING_EVENTS = [
   {
@@ -18,6 +18,15 @@ var UPCOMING_EVENTS = [
     "detail": "Roles include roles running the games, face painting, helping at the pie-in-the-face booth, the dunk booth, and the cake walk, selling food and spirit wear, and more.",
     "spots": "Thu Jan 15 2026 00:00:00 GMT-0500 (Eastern Standard Time)",
     "url": "https://www.signupgenius.com/go/10C094BACAD2CA3F9CF8-66299913-alderman#/",
+    "dateNote": ""
+  },
+  {
+    "title": "Camp Eagle Where Curiosity Take Flight Title I Night",
+    "day": "10",
+    "mo": "DECEMBER",
+    "detail": "Title 1 Night: Camp Eagle, Where Curiosity Takes Flight, on Thursday, December 10, 2026, from 5-7. This night will consist of families exploring different hands-on activities.  Each room would have at least one adult to help",
+    "spots": "50",
+    "url": "https://www.signupgenius.com/go/10C094BACAD2CA3F9CF8-67310966-camp",
     "dateNote": ""
   }
 ];
